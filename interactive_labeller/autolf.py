@@ -26,11 +26,16 @@ from cluster_sentence.model_info import MODEL_PREPROCESSING, MODEL_BUILD_FUNCTIO
 # embedding extractor
 from cluster_sentence.sentence_embedding import EmbeddingExtractor
 
+# embedding clusterer
+from cluster_sentence.clustering import SentenceCluster
+
 # clustering infos
 from cluster_sentence.clustering_info import CLUSTERING_FUNCTIONS
 
 # all the customizers
-from cluster_sentence.customization_utils import sentence_embedding_customizer, embedding_clustering_customizer
+from cluster_sentence.customization_utils import (sentence_embedding_customizer, 
+                                                  embedding_clustering_customizer, 
+                                                  nested_dataframe_customizer)
 
 # ---------------------------------------------- Page Layout
 
@@ -54,6 +59,10 @@ if 'text_column_name' not in st.session_state:
 if 'sent_emb_extractor' not in st.session_state:
     st.session_state.sent_emb_extractor = EmbeddingExtractor(None, None, None)
 
+# stores the empty embedding extractor
+if 'sent_emb_clusterer' not in st.session_state:
+    st.session_state.sent_emb_clusterer = SentenceCluster(None)
+
 # stores the clustering arguments
 if 'clustering_args' not in st.session_state:
     st.session_state.clustering_args = {
@@ -61,10 +70,12 @@ if 'clustering_args' not in st.session_state:
     }
 
 # prepare data button state
-prep_data_button = False
+if 'prep_data_button' not in st.session_state:
+    st.session_state.prep_data_button = False
 
 # cluster data button state
-clust_data_button = False
+if 'clust_data_button' not in st.session_state:
+    st.session_state.clust_data_button = False
 
 # ---------------------------------------------- The Interface
 
@@ -135,7 +146,7 @@ with cola:
                 st.dataframe(pd.DataFrame({'Label Names': st.session_state.label_names}), use_container_width=True)
             
             # start extracting the embeddings from the data for labelling ease
-            prep_data_button = st.button('🪄 Prepare Data', use_container_width=True)
+            st.button('🪄 Prepare Data', use_container_width=True, key='prep_data_button')
         
         with col5:
 
@@ -160,7 +171,7 @@ with cola:
 with colb:
 
     # ---------------------------------------------- Prepare Data
-    if prep_data_button:
+    if st.session_state.prep_data_button:
         
         # ---------------------------------------------- Embedding Extraction
 
@@ -185,45 +196,86 @@ with colb:
             # Extract the Embeddings
             st.session_state.sent_emb_extractor.extract_embeddings(st.session_state.data[st.session_state.text_column_name].to_list())
         
-    # ---------------------------------------------- Embedding Clustering
-    if st.session_state.sent_emb_extractor.embeddings is not None:
-        with col6:
-            clust_data_button = st.button('💡 Cluster Data', use_container_width=True)
 
-    # markmap text
-    md = '''
-    - 19998.0
-	 - 19194.0
-		 - ok sir so for the "xbox" it has better ergonomics on its controller but the "sony" "psp" has a better graphics all in all
-		 - i'm doing good too i'm looking for information about video game video game consoles
-	 - 19997.0
-		 - 19994.0
-			 - okay and are there any limitations or exclusions on compression stockings or any lower aah compression garments low extremity compression garments
-			 - 19989.0
-				 - it is collapsible but i don't think it's collapsible enough to fit any of our suitcase
-				 - 19981.0
-					 - 19344.0
-						 - does it have any measurement issues or just i need to keep the thing okay
-						 - so maximum accepted dimensions it's forty inches in height
-					 - 19907.0
-						 - 19488.0
-							 - 17987.0
-								 - it's fine ma'am if it's already been opened but i need to ask you to reseal it first with some tape before sending it back to our offices
-								 - will be safe sealed so you don't have to worry on it
-								 - it's fine ma'am if it's already been opened but i need to ask you to reseal it first with some tape before sending it back to our offices
-								 - will be safe sealed so you don't have to worry on it
-							 - 19336.0
-								 - can you put you said it store and "colt" okay have you discussed this issue with you doctor at all
-								 - it's separate from the ammunition is that still okay to check in luggage as long as it's locked in a box
-						 - 19687.0
-							 - 19358.0
-								 - everything that i need to put of anything of liquids has to go into the the little clear zip locks bag
-								 - 19030.0
-									 - 17132.0
-										 - it was the the seat selection and the checked bags and stuff that i saved
-										 - liked checked bags carry on bags and seat selections as you choose
-										 - it was the the seat selection and the checked bags and stuff that i saved
-										 - liked checked bags carry on bags and seat selections as you choose
-									 - 18570.0
-    '''
-    markmap(md,height=600)
+# ---------------------------------------------- Embedding Clustering
+
+# the cluster data button
+if st.session_state.sent_emb_extractor.embeddings is not None:
+    with col6:
+        st.button('💡 Cluster Data', use_container_width=True, key='clust_data_button')
+
+with colb:
+
+    if st.session_state.clust_data_button:
+
+        # clustering the embeddings
+        with st.spinner('Clustering Sentences...'):
+            st.session_state.sent_emb_clusterer = SentenceCluster(st.session_state.clust_strat_name)
+
+            st.session_state.sent_emb_clusterer.cluster(
+                st.session_state.sent_emb_extractor.embeddings / np.linalg.norm(st.session_state.sent_emb_extractor.embeddings, axis=1, keepdims=True), 
+                st.session_state.clustering_args[st.session_state.clust_strat_name])
+        
+        ## create tree from clustered data --> For Markmap
+        # with st.spinner('Creating Interactive Tree...'):
+            # st.session_state.sent_emb_clusterer.convert_tree_to_markmap(st.session_state.data[st.session_state.text_column_name])
+
+    ## markmap display --> For Markmap
+    # markmap(st.session_state.sent_emb_clusterer.markmap_text,height=600)
+
+        # create tree dataframe from clustered data
+        with st.spinner('Creating Interactive Data Tree...'):
+            st.session_state.sent_emb_clusterer.convert_tree_to_dataframe(st.session_state.data[st.session_state.text_column_name])
+
+    # display tree dataframe
+    tree_dataframe = nested_dataframe_customizer(st.session_state.sent_emb_clusterer.tree_dataframe)
+    # import pandas as pd
+    # import streamlit as st
+    # from st_aggrid import JsCode, AgGrid, GridOptionsBuilder
+    # from st_aggrid.shared import GridUpdateMode
+
+    # def GetLastName(row):
+    #     nsarr = row['orgHierarchy'].split('|')
+    #     return(nsarr[len(nsarr)-1])
+
+    # df=pd.DataFrame({ "orgHierarchy": ['Erica Rogers', 
+    #                                 'Erica Rogers|Malcolm Barrett',
+    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker',
+    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker|Brittany Hanson',
+    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker|Brittany Hanson|Leah Flowers',
+    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker|Brittany Hanson|Tammy Sutton',
+    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker|Derek Paul',
+    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland',
+    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland|Morris Hanson',
+    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland|Todd Tyler',
+    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland|Bennie Wise',
+    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland|Joel Cooper'],
+    #                 "jobTitle": [ 'CEO', 'Exec. Vice President', 'Director of Operations', 'Fleet Coordinator', 'Parts Technician',
+    #                                 'Service Technician', 'Inventory Control', 'VP Sales', 'Sales Manager', 'Sales Executive',
+    #                                 'Sales Executive', 'Sales Executive' ], 
+    #                 "employmentType": [ 'Permanent', 'Permanent', 'Permanent', 'Permanent', 'Contract', 'Contract', 'Permanent', 'Permanent',
+    #                                     'Permanent', 'Contract', 'Contract', 'Permanent' ]}, 
+    # )
+
+    # df['Name'] = df.apply(lambda row: GetLastName(row), axis=1)
+    # df.insert(0, "Name", df.pop("Name"))    # move col to 0 pstn
+
+    # gb = GridOptionsBuilder.from_dataframe(df)
+    # gb.configure_selection(selection_mode="single", use_checkbox=False)
+    # gb.configure_column("orgHierarchy", hide = "True")
+    # gb.configure_column("Name", hide = "True")
+    # gridOptions = gb.build()
+
+    # gridOptions["autoGroupColumnDef"]= {'cellRendererParams': {'checkbox': True }}
+    # gridOptions["treeData"]=True
+    # gridOptions["animateRows"]=True
+    # gridOptions["groupDefaultExpanded"]= -1   # expand all
+    # gridOptions["getDataPath"]=JsCode("function(data){ return data.orgHierarchy.split('|'); }").js_code
+
+    # dta = AgGrid(df, gridOptions=gridOptions, height=350, allow_unsafe_jscode=True, enable_enterprise_modules=True,
+    #             update_mode=GridUpdateMode.SELECTION_CHANGED)
+
+    # st.write(dta['selected_rows'])
+
+# with cola:
+#     st.write(tree_dataframe['selected_rows'])

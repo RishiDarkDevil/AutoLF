@@ -7,10 +7,14 @@ import streamlit as st
 from .model_info import MODEL_PREPROCESSING, MODEL_BUILD_FUNCTIONS, MODEL_POSTPROCESSING
 
 # the clustering details
-from .clustering_info import CLUSTERING_FUNCTIONS
+from .clustering_info import CLUSTERING_FUNCTIONS, add_cluster_args_and_add_customization
+
+# hierarchical dataframe visualization
+from st_aggrid import JsCode, AgGrid, GridOptionsBuilder, GridUpdateMode
 
 # ---------------------------------------------- Add Customizer Expanders
 
+# ---------------------------------------------- Customizer for Sentence Embedding Extraction
 def sentence_embedding_customizer(customize_modal):
     '''
     Adds the UI for the sentence embedding customizer to the expander `modal`
@@ -40,7 +44,8 @@ def sentence_embedding_customizer(customize_modal):
         1, None, 2048, 1, '%d', 
         key='sent_emb_batch_size', 
         help='Batch Size to be used by the Sentence Transformer Model') # , disabled=st.session_state.rand
-    
+
+# ---------------------------------------------- Customizer for Embedding Clustering
 def embedding_clustering_customizer(customize_modal):
     '''
     Adds the UI for the embedding clustering customizer to the expander `modal`
@@ -55,49 +60,77 @@ def embedding_clustering_customizer(customize_modal):
         help='The Clustering Strategy for the Sentence Embeddings'
         )
     
-    # Agglomerative Clustering Customization
-    if st.session_state.clust_strat_name == 'Agglomerative Clustering':
-
-        # number of clusters
-        st.session_state.clustering_args[st.session_state.clust_strat_name]['n_clusters'] = None
-
-        # metric
-        st.session_state.clustering_args[st.session_state.clust_strat_name]['metric'] = customize_modal.selectbox(
-            'Metric',
-            ['cosine', 'euclidean', 'l1', 'l2', 'manhattan'],
-            index=0,
-            help='The metric to be used in Agglomerative Clustering'
-        )
-
-        # linkage
-        st.session_state.clustering_args[st.session_state.clust_strat_name]['linkage'] = customize_modal.selectbox(
-            'Linkage',
-            ['average', 'ward', 'complete', 'single'],
-            index=0,
-            help='The Linkage to be used in Agglomerative Clustering'
-        )
-
-        # distance threshold
-        st.session_state.clustering_args[st.session_state.clust_strat_name]['distance_threshold'] = customize_modal.slider(
-            'Distance Threshold',
-            0.0, 1.0, 0.5, 0.01, '%f',
-            help='The Distance Threshold to be used in Agglomerative Clustering'
+    # updating the clustering args dictionary with the user input values
+    add_cluster_args_and_add_customization(
+        st.session_state.clust_strat_name, 
+        customize_modal,
+        st.session_state.clustering_args[st.session_state.clust_strat_name]
         )
     
-    # Community Clustering Customization
-    if st.session_state.clust_strat_name == 'Community Clustering':
-
-        # minimum community size
-        st.session_state.clustering_args[st.session_state.clust_strat_name]['min_community_size'] = customize_modal.number_input(
-            'Minimum Community Size', 
-            1, None, 1, 1, '%d',  
-            help='Minimum Size of the Cluster to be kept'
-        )
-
-        # linkage
-        st.session_state.clustering_args[st.session_state.clust_strat_name]['threshold'] = customize_modal.slider(
-            'Threshold',
-            0.0, 1.0, 0.6, 0.01, '%f',
-            help='The similarity threshold above which will present in same cluster '
-        )
+# ---------------------------------------------- Customizer for Tree DataFrame
+def nested_dataframe_customizer(tree_dataframe):
+    '''
+    Customizes and Adds UI for the Tree DataFrame
+    :tree_dataframe: A dataframe with columns `Hierarchy`, `Sentence` displaying the hierarchical data
+    '''
+    # tree dataframe customization options
+    gb = GridOptionsBuilder.from_dataframe(st.session_state.sent_emb_clusterer.tree_dataframe)
     
+    # # customizing the tree dataframe
+
+    # selection of multiple rows, children, etc using checkbox
+    gb.configure_selection(selection_mode='multiple', use_checkbox=True, header_checkbox=True)
+
+    # configuring the columns with various properties
+    # Hid the `Hierarchy` column
+    gb.configure_column('Hierarchy', hide = 'True')
+    # Add hover tooltip full sentence display on Sentence for easier viewing
+    gb.configure_column('Sentence', tooltipField = 'Sentence')
+
+    # build the options to add extra features like tree data
+    gridOptions = gb.build()
+
+    gb.configure_pagination()
+
+    # the `Sentence` column customization
+    # gridOptions['columnDefs'] = [{
+    #         'field': 'Sentence',
+    #         'filter': True ,
+    #         'sortable': True,
+    #         'resizable': True,
+    #         'tooltipField': 'Sentence',
+    #         'autoHieght': True,
+    #         'wrapText': True
+    #     },]
+ 
+    # the grouped column customization
+    gridOptions['autoGroupColumnDef']= {
+            'cellRendererParams': {
+                'checkbox': True,
+            }
+        }
+    gridOptions['treeData']=True
+    gridOptions['animateRows']=True
+    gridOptions['groupDefaultExpanded']=-1
+    gridOptions['getDataPath']=JsCode(''' function(data){
+        return data.Hierarchy.split("/");
+    }''').js_code
+
+    tree_dataframe = AgGrid(
+        st.session_state.sent_emb_clusterer.tree_dataframe,
+        gridOptions=gridOptions,
+        height=1000,
+        width='100%',
+        fit_columns_on_grid_load=True,
+        allow_unsafe_jscode=True,
+        enable_enterprise_modules=True,
+        filter=True,
+        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        theme='material',
+        tree_data=True,
+        custom_css={"#gridToolBar": {"padding-bottom": "0px !important"}}
+    )
+
+    return tree_dataframe
+
+        
