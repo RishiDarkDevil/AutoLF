@@ -4,13 +4,13 @@
 import streamlit as st
 
 # the model details
-from .model_info import MODEL_PREPROCESSING, MODEL_BUILD_FUNCTIONS, MODEL_POSTPROCESSING
+from .model_info import MODEL_PREPROCESSING
 
 # the clustering details
 from .clustering_info import CLUSTERING_FUNCTIONS, add_cluster_args_and_add_customization
 
 # hierarchical dataframe visualization
-from st_aggrid import JsCode, AgGrid, GridOptionsBuilder, GridUpdateMode
+from st_aggrid import JsCode, AgGrid, GridOptionsBuilder, GridUpdateMode, ColumnsAutoSizeMode
 
 # ---------------------------------------------- Add Customizer Expanders
 
@@ -87,6 +87,20 @@ def nested_dataframe_customizer(tree_dataframe):
     # Add hover tooltip full sentence display on Sentence for easier viewing
     gb.configure_column('Sentence', tooltipField = 'Sentence')
 
+    # row deletion on checkbox select js code
+    js = JsCode("""
+    function(e) {
+        let api = e.api;     
+        // Get the selected rows   
+        var sel = api.getSelectedRows();    
+        // Remove the selected rows
+        api.applyTransactionAsync({remove: sel});
+        sel[0].data // IDK why adding this makes the deleted data to be returned which I wanted anyways.. So not bothering to change this : /
+    };
+    """)
+    # inject the js code in the grid
+    gb.configure_grid_options(onRowSelected=js)
+
     # build the options to add extra features like tree data
     gridOptions = gb.build()
 
@@ -109,6 +123,7 @@ def nested_dataframe_customizer(tree_dataframe):
                 'checkbox': True,
             }
         }
+    # Tree Data Handling
     gridOptions['treeData']=True
     gridOptions['animateRows']=True
     gridOptions['groupDefaultExpanded']=-1
@@ -116,11 +131,13 @@ def nested_dataframe_customizer(tree_dataframe):
         return data.Hierarchy.split("/");
     }''').js_code
 
+    # Tree DataFrame
     tree_dataframe = AgGrid(
         st.session_state.sent_emb_clusterer.tree_dataframe,
         gridOptions=gridOptions,
         height=1000,
         width='100%',
+        columns_auto_size_mode=ColumnsAutoSizeMode.FIT_ALL_COLUMNS_TO_VIEW,
         fit_columns_on_grid_load=True,
         allow_unsafe_jscode=True,
         enable_enterprise_modules=True,

@@ -229,53 +229,52 @@ with colb:
 
     # display tree dataframe
     tree_dataframe = nested_dataframe_customizer(st.session_state.sent_emb_clusterer.tree_dataframe)
+
+with cola:
+    st.write(tree_dataframe['selected_rows'])
+
+    # import string
+
+    # import numpy as np
     # import pandas as pd
     # import streamlit as st
-    # from st_aggrid import JsCode, AgGrid, GridOptionsBuilder
-    # from st_aggrid.shared import GridUpdateMode
+    # from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
-    # def GetLastName(row):
-    #     nsarr = row['orgHierarchy'].split('|')
-    #     return(nsarr[len(nsarr)-1])
+    # # st.set_page_config(layout='wide')
 
-    # df=pd.DataFrame({ "orgHierarchy": ['Erica Rogers', 
-    #                                 'Erica Rogers|Malcolm Barrett',
-    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker',
-    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker|Brittany Hanson',
-    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker|Brittany Hanson|Leah Flowers',
-    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker|Brittany Hanson|Tammy Sutton',
-    #                                 'Erica Rogers|Malcolm Barrett|Esther Baker|Derek Paul',
-    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland',
-    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland|Morris Hanson',
-    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland|Todd Tyler',
-    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland|Bennie Wise',
-    #                                 'Erica Rogers|Malcolm Barrett|Francis Strickland|Joel Cooper'],
-    #                 "jobTitle": [ 'CEO', 'Exec. Vice President', 'Director of Operations', 'Fleet Coordinator', 'Parts Technician',
-    #                                 'Service Technician', 'Inventory Control', 'VP Sales', 'Sales Manager', 'Sales Executive',
-    #                                 'Sales Executive', 'Sales Executive' ], 
-    #                 "employmentType": [ 'Permanent', 'Permanent', 'Permanent', 'Permanent', 'Contract', 'Contract', 'Permanent', 'Permanent',
-    #                                     'Permanent', 'Contract', 'Contract', 'Permanent' ]}, 
-    # )
+    # def display_table(df: pd.DataFrame) -> AgGrid:
+    #     # Configure AgGrid options
+    #     gb = GridOptionsBuilder.from_dataframe(df)
+    #     gb.configure_selection('multiple', use_checkbox=True) 
+    #     return AgGrid(
+    #         df,
+    #         gridOptions=gb.build(),
+    #         # this override the default VALUE_CHANGED
+    #         update_mode=GridUpdateMode.MODEL_CHANGED
+    #     )
 
-    # df['Name'] = df.apply(lambda row: GetLastName(row), axis=1)
-    # df.insert(0, "Name", df.pop("Name"))    # move col to 0 pstn
 
-    # gb = GridOptionsBuilder.from_dataframe(df)
-    # gb.configure_selection(selection_mode="single", use_checkbox=False)
-    # gb.configure_column("orgHierarchy", hide = "True")
-    # gb.configure_column("Name", hide = "True")
-    # gridOptions = gb.build()
+    # # Define dummy data
+    # rng = np.random.default_rng(2021)
+    # N_SAMPLES = 100
+    # N_FEATURES = 10
+    # df = pd.DataFrame(rng.integers(0, N_SAMPLES, size=(
+    #     N_SAMPLES, N_FEATURES)), columns=list(string.ascii_uppercase[:N_FEATURES]))
 
-    # gridOptions["autoGroupColumnDef"]= {'cellRendererParams': {'checkbox': True }}
-    # gridOptions["treeData"]=True
-    # gridOptions["animateRows"]=True
-    # gridOptions["groupDefaultExpanded"]= -1   # expand all
-    # gridOptions["getDataPath"]=JsCode("function(data){ return data.orgHierarchy.split('|'); }").js_code
+    # # Display data and selected rows
+    # left, right = st.columns(2)
+    # with left:
+    #     st.info("Select rows to be deleted")
+    #     response = display_table(df)
+    # with right:
+    #     st.warning("Rows selected for deletion")
+    #     rows_to_delete = pd.DataFrame(response['selected_rows'])
+    #     st.write(rows_to_delete)
 
-    # dta = AgGrid(df, gridOptions=gridOptions, height=350, allow_unsafe_jscode=True, enable_enterprise_modules=True,
-    #             update_mode=GridUpdateMode.SELECTION_CHANGED)
-
-    # st.write(dta['selected_rows'])
-
-# with cola:
-#     st.write(tree_dataframe['selected_rows'])
+    # # Delete rows on button press
+    # if st.button("Delete rows") and not rows_to_delete.empty:
+    #     # Lookup table is needed because AgGrid does not return rows indices
+    #     lookup = df.merge(rows_to_delete, on=list(df.columns), how='left', indicator=True)
+    #     _df = df.drop(lookup[lookup['_merge'] == 'both'].index)
+    #     st.success('Rows deleted')
+    #     st.write(_df)
