@@ -41,7 +41,7 @@ def sentence_embedding_customizer(customize_modal):
     # Batch Size for the Sentence Embedding Model
     customize_modal.number_input(
         'Batch Size', 
-        1, None, 2048, 1, '%d', 
+        1, None, 1024, 1, '%d', 
         key='sent_emb_batch_size', 
         help='Batch Size to be used by the Sentence Transformer Model') # , disabled=st.session_state.rand
 
@@ -55,7 +55,7 @@ def embedding_clustering_customizer(customize_modal):
     customize_modal.selectbox(
         'Clustering Strategy',
         CLUSTERING_FUNCTIONS.keys(),
-        index=1, 
+        index=0, 
         key='clust_strat_name',
         help='The Clustering Strategy for the Sentence Embeddings'
         )
@@ -68,13 +68,18 @@ def embedding_clustering_customizer(customize_modal):
         )
     
 # ---------------------------------------------- Customizer for Tree DataFrame
-def nested_dataframe_customizer(tree_dataframe):
+def nested_dataframe_customizer(tree_dataframe, key=None, select_to_remove=True, reload_data=False, num_expanded=-1, update_mode=GridUpdateMode.SELECTION_CHANGED):
     '''
     Customizes and Adds UI for the Tree DataFrame
     :tree_dataframe: A dataframe with columns `Hierarchy`, `Sentence` displaying the hierarchical data
+    :key: key for this component 
+    :select_to_remove: whether selection of rows should remove them
+    :reload_data: Whether to update the Tree Data when input dataframe is changed
+    :num_expanded: How many levels to expand in the tree data [-1 indicates all levels are expanded]
+    :update_mode: specific cases when to auto update the tree data
     '''
     # tree dataframe customization options
-    gb = GridOptionsBuilder.from_dataframe(st.session_state.sent_emb_clusterer.tree_dataframe)
+    gb = GridOptionsBuilder.from_dataframe(tree_dataframe)
     
     # # customizing the tree dataframe
 
@@ -87,35 +92,26 @@ def nested_dataframe_customizer(tree_dataframe):
     # Add hover tooltip full sentence display on Sentence for easier viewing
     gb.configure_column('Sentence', tooltipField = 'Sentence')
 
-    # row deletion on checkbox select js code
-    js = JsCode("""
-    function(e) {
-        let api = e.api;     
-        // Get the selected rows   
-        var sel = api.getSelectedRows();    
-        // Remove the selected rows
-        api.applyTransactionAsync({remove: sel});
-        sel[0].data // IDK why adding this makes the deleted data to be returned which I wanted anyways.. So not bothering to change this : /
-    };
-    """)
-    # inject the js code in the grid
-    gb.configure_grid_options(onRowSelected=js)
+    if select_to_remove:
+        # row deletion on checkbox select js code
+        js = JsCode("""
+        function(e) {
+            let api = e.api;     
+            // Get the selected rows   
+            var sel = api.getSelectedRows();    
+            // Remove the selected rows
+            api.applyTransactionAsync({remove: sel});
+            sel[0].data // IDK why adding this makes the deleted data to be returned which I wanted anyways.. So not bothering to change this : /
+        };
+        """)
+        # inject the js code in the grid
+        gb.configure_grid_options(onRowSelected=js)
 
     # build the options to add extra features like tree data
     gridOptions = gb.build()
 
+    # enables pagination
     gb.configure_pagination()
-
-    # the `Sentence` column customization
-    # gridOptions['columnDefs'] = [{
-    #         'field': 'Sentence',
-    #         'filter': True ,
-    #         'sortable': True,
-    #         'resizable': True,
-    #         'tooltipField': 'Sentence',
-    #         'autoHieght': True,
-    #         'wrapText': True
-    #     },]
  
     # the grouped column customization
     gridOptions['autoGroupColumnDef']= {
@@ -126,14 +122,14 @@ def nested_dataframe_customizer(tree_dataframe):
     # Tree Data Handling
     gridOptions['treeData']=True
     gridOptions['animateRows']=True
-    gridOptions['groupDefaultExpanded']=-1
+    gridOptions['groupDefaultExpanded']=num_expanded
     gridOptions['getDataPath']=JsCode(''' function(data){
         return data.Hierarchy.split("/");
     }''').js_code
 
     # Tree DataFrame
     tree_dataframe = AgGrid(
-        st.session_state.sent_emb_clusterer.tree_dataframe,
+        tree_dataframe,
         gridOptions=gridOptions,
         height=1000,
         width='100%',
@@ -142,9 +138,11 @@ def nested_dataframe_customizer(tree_dataframe):
         allow_unsafe_jscode=True,
         enable_enterprise_modules=True,
         filter=True,
-        update_mode=GridUpdateMode.SELECTION_CHANGED,
+        update_mode=update_mode,
         theme='material',
         tree_data=True,
+        key=key,
+        reload_data=reload_data,
         custom_css={"#gridToolBar": {"padding-bottom": "0px !important"}}
     )
 
