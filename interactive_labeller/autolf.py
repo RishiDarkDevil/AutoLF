@@ -89,11 +89,52 @@ if 'labelled_tree_data' not in st.session_state:
 if 'prev_labelled_rows' not in st.session_state:
     st.session_state.prev_labelled_rows = {}
 
+# stores the test data
+if 'test_data' not in st.session_state:
+    st.session_state.test_data = list()
+
 # ---------------------------------------------- The Interface
 
 # cola - set parameters and input data
 # colb - labelling and rest of workflow
 cola, colb = st.columns([0.8,1])
+
+# ---------------------------------------------- Model Fine-Tuning
+
+with colb:
+
+    st.title('🦾 Train Model')
+    st.write('🔥 Fine-tune a model with the labelled data.')
+
+    # split into 2 columns
+    colt1, colt2 = st.columns([1.5, 1])
+
+    with colt1:
+        # upload the dataset
+        up_test_data = st.file_uploader("👨🏻‍💻 Upload Test Dataset File", type={"csv", "txt"})
+
+    if up_test_data is not None:
+
+        # read csv dataset file
+        st.session_state.test_data = pd.read_csv(up_test_data)
+
+        # select the text column of dataset to label
+        with colt2:
+            st.session_state.test_text_column_name = st.selectbox(
+                '💬 Select Text Column',
+                st.session_state.test_data.columns
+                )
+        
+            # select the ground truth label column of the dataset
+            st.session_state.test_label_column_name = st.selectbox(
+                '✏️ Select Label Column',
+                [colname for colname in st.session_state.test_data.columns 
+                if colname != st.session_state.test_text_column_name]
+                )
+    
+    # enter label name
+    st_tags(['prajjwal1/bert-tiny'], text='Enter to Add More', label='🤖 Enter HF Model Names', key='classifier_names')
+    
 
 # ---------------------------------------------- Data Input and User Preferences
 
@@ -231,8 +272,11 @@ with colb:
         with st.spinner('Creating Interactive Data Tree...'):
             st.session_state.sent_emb_clusterer.convert_tree_to_dataframe(st.session_state.data[st.session_state.text_column_name])
 
+    # st.header('🦾 Unlabelled Data')
+    # st.write('🕹 Choose `Current Label` and use checkboxes to label the following data.')
+
     # display tree dataframe
-    tree_dataframe = nested_dataframe_customizer(st.session_state.sent_emb_clusterer.tree_dataframe, 'original_data_tree')
+    tree_dataframe = nested_dataframe_customizer(st.session_state.sent_emb_clusterer.tree_dataframe, 'original_data_tree', height=970)
 
 with cola:
 
@@ -259,8 +303,11 @@ with cola:
 
             # st.dataframe(st.session_state.labelled_tree_data)
 
+    st.header('📝 Labelled Data')
+    st.write('📛 View Labelled Data.')
+
     # updating the tree dataframe displaying labelled data
-    st.session_state.labelled_tree_dataframe = nested_dataframe_customizer(st.session_state.labelled_tree_data, 'labelled_data_tree', False, True, 0)
+    st.session_state.labelled_tree_dataframe = nested_dataframe_customizer(st.session_state.labelled_tree_data, 'labelled_data_tree', False, True, 0, height=len(st.session_state.label_names) * 100)
 
     # # Display data and selected rows
     # left, right = st.columns(2)

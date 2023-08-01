@@ -7,6 +7,8 @@ __pycache__/
 data
 paper
 
+sentence_clustering
+
 # C extensions
 *.so
 

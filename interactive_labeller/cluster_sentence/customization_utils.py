@@ -68,7 +68,7 @@ def embedding_clustering_customizer(customize_modal):
         )
     
 # ---------------------------------------------- Customizer for Tree DataFrame
-def nested_dataframe_customizer(tree_dataframe, key=None, select_to_remove=True, reload_data=False, num_expanded=-1, update_mode=GridUpdateMode.SELECTION_CHANGED):
+def nested_dataframe_customizer(tree_dataframe, key=None, select_to_remove=True, reload_data=False, num_expanded=-1, update_mode=GridUpdateMode.SELECTION_CHANGED, height=1000):
     '''
     Customizes and Adds UI for the Tree DataFrame
     :tree_dataframe: A dataframe with columns `Hierarchy`, `Sentence` displaying the hierarchical data
@@ -131,7 +131,7 @@ def nested_dataframe_customizer(tree_dataframe, key=None, select_to_remove=True,
     tree_dataframe = AgGrid(
         tree_dataframe,
         gridOptions=gridOptions,
-        height=1000,
+        height=height,
         width='100%',
         columns_auto_size_mode=ColumnsAutoSizeMode.FIT_ALL_COLUMNS_TO_VIEW,
         fit_columns_on_grid_load=True,
