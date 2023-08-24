@@ -21,9 +21,13 @@ streamlit run autolf.py
 - AutoLF provides advanced search features to crack down into finer and finer details of the data as well as searching for a particular concept or idea in the unlabelled corpus to help annotators have better expressivity and faster annotation capability.
 - AutoLF combines Weak Supervision and Active Learning to fine-tune an ensemble of weak learners, usually small language models, to capture various views of the labelled instances in each round whose scores are combined using a Snorkel Label Model to arrive at a final label for the data.
 
-| Topic-Sentence Clustering & Semantic Search | Weak Supervision & Active Learning  |
-|---|---|
-| ![](assets/2.png)  | ![](assets/3.png)  |
+| Topic-Sentence Clustering & Semantic Search |
+|---|
+| ![](assets/2.png)  | 
+
+| Weak Supervision & Active Learning  |
+|---|
+![](assets/3.png)  |
 
 ## Results
 I tested the AutoLF workflow for tasks like Sentiment Classification and Hate Speech Classification. The following is the result of AutoLF compared to a usual Active Learning counterpart on a proprietary sentiment classification dataset.
